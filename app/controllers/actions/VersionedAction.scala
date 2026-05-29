@@ -17,6 +17,7 @@
 package controllers.actions
 
 import com.google.inject.ImplementedBy
+import config.AppConfig
 import models.Phase
 import models.Phase.*
 import models.request.VersionedRequest
@@ -30,13 +31,15 @@ import scala.concurrent.{ExecutionContext, Future}
 @ImplementedBy(classOf[VersionedActionImpl])
 trait VersionedAction extends ActionRefiner[Request, VersionedRequest] with ActionBuilder[VersionedRequest, AnyContent]
 
-class VersionedActionImpl @Inject() (override val parser: BodyParsers.Default)(implicit val executionContext: ExecutionContext) extends VersionedAction {
+class VersionedActionImpl @Inject() (override val parser: BodyParsers.Default, appConfig: AppConfig)(implicit val executionContext: ExecutionContext)
+    extends VersionedAction {
 
   override protected def refine[A](request: Request[A]): Future[Either[Result, VersionedRequest[A]]] = {
     val pattern = """application/vnd.hmrc.(.*)\+json""".r
 
     Future.successful {
       request.headers.get(Accept) match {
+        case _ if appConfig.forcePhase5Data => Right(VersionedRequest(request, Phase5))
         case Some(pattern(version)) =>
           Phase(version) match {
             case Some(phase) => Right(VersionedRequest(request, phase))

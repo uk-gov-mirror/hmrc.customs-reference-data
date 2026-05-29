@@ -17,8 +17,10 @@
 package controllers.actions
 
 import base.SpecBase
+import config.AppConfig
 import models.Phase.*
 import models.request.VersionedRequest
+import org.mockito.Mockito.when
 import play.api.mvc.*
 import play.api.mvc.Results.BadRequest
 import play.api.test.FakeRequest
@@ -30,7 +32,9 @@ import scala.concurrent.Future
 
 class VersionedActionSpec extends SpecBase {
 
-  private class Harness(override val parser: BodyParsers.Default) extends VersionedActionImpl(parser) {
+  val mockAppConfig: AppConfig = mock[AppConfig]
+
+  private class Harness(override val parser: BodyParsers.Default) extends VersionedActionImpl(parser, mockAppConfig) {
 
     def callRefine[A](request: Request[A]): Future[Either[Result, VersionedRequest[A]]] =
       refine(request)
@@ -42,6 +46,7 @@ class VersionedActionSpec extends SpecBase {
 
     "when 1.0 header" - {
       "must return request with version 1.0" in {
+        when(mockAppConfig.forcePhase5Data).thenReturn(false)
         val action = new Harness(bodyParser)
 
         val request = fakeRequest.withHeaders(Accept -> "application/vnd.hmrc.1.0+json")
@@ -53,6 +58,7 @@ class VersionedActionSpec extends SpecBase {
 
     "when 2.0 header" - {
       "must return request with version 2.0" in {
+        when(mockAppConfig.forcePhase5Data).thenReturn(false)
         val action = new Harness(bodyParser)
 
         val request = fakeRequest.withHeaders(Accept -> "application/vnd.hmrc.2.0+json")
@@ -60,10 +66,21 @@ class VersionedActionSpec extends SpecBase {
 
         result.value mustEqual VersionedRequest(request, Phase6)
       }
+
+      "must return request with version 1.0 when 'force-phase5-data' is true" in {
+        when(mockAppConfig.forcePhase5Data).thenReturn(true)
+        val action = new Harness(bodyParser)
+
+        val request = fakeRequest.withHeaders(Accept -> "application/vnd.hmrc.2.0+json")
+        val result  = action.callRefine(request).futureValue
+
+        result.value mustEqual VersionedRequest(request, Phase5)
+      }
     }
 
     "when undefined header" - {
       "must return request with version 1.0" in {
+        when(mockAppConfig.forcePhase5Data).thenReturn(false)
         val action = new Harness(bodyParser)
 
         val request = fakeRequest
@@ -75,6 +92,7 @@ class VersionedActionSpec extends SpecBase {
 
     "when invalid version" - {
       "must return bad request" in {
+        when(mockAppConfig.forcePhase5Data).thenReturn(false)
         val action = new Harness(bodyParser)
 
         val request = fakeRequest.withHeaders(Accept -> "application/vnd.hmrc.foo+json")
@@ -86,6 +104,7 @@ class VersionedActionSpec extends SpecBase {
 
     "when random header" - {
       "must return request with version 1.0" in {
+        when(mockAppConfig.forcePhase5Data).thenReturn(false)
         val action = new Harness(bodyParser)
 
         val request = fakeRequest.withHeaders(Accept -> "foo")
