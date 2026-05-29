@@ -27,6 +27,7 @@ class AppConfig @Inject() (config: Configuration, servicesConfig: MyServicesConf
   lazy val replaceIndexes: Boolean          = config.get[Boolean]("mongodb.replaceIndexes")
   lazy val ttl: Int                         = config.get[Int]("mongodb.timeToLiveInSeconds")
   lazy val incomingAuth: IncomingAuthConfig = config.get[IncomingAuthConfig]("incomingRequestAuth")
+  lazy val forcePhase5Data: Boolean         = config.get[Boolean]("force-phase5-data")
 
   lazy val crdlCacheUrl: String = servicesConfig.fullServiceUrl("crdl-cache")
 
